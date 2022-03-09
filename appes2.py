@@ -22,6 +22,7 @@ def data():
     sex = request.args['Sex']
     if password == conferma_password:
         lista.append({'name':name,'username':username,'password':password,'sex':sex})
+        print(lista)
         return render_template('login.html')
     else:
         return render_template('errore.html')
@@ -30,17 +31,15 @@ def data():
 def login():
     username_log = request.args["username"]
     password_log = request.args["password"]
-    for i in lista:
-        if i == 'password':
-            p = i
-    else:
-        p = 's'
+    for utente in lista:
+        if utente['username'] == username_log and utente['password'] == password_log:
+            if utente['sex'] == 'M':
+                return render_template('welcome.html',nome_user=utente['name'])
+            else:
+                return render_template('benvenuta.html',nome_user=utente['name'])    
+             
+    return render_template('errore.html',messaggio='username o password sbagliati')    
 
-
-    if password_log == p:
-        return render_template('welcome.html',nome_user=username_log)
-    else:
-        return render_template('errore.html')
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=3245, debug=True)
