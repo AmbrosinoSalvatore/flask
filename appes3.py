@@ -13,13 +13,15 @@ def hello_world():
 
 @app.route('/data', methods=['GET'])
 def data():
+    # prende la regione scritta dall'utente
     regione = request.args["reg_cap"]
+    # crea la variabile capoluogo e vi inserisce il capoluogo di quella regione
+    # se la regione non ce restituisce il messaggio 'regione non esistente'
+    capoluogo=capoluoghiRegione.get(regione,'regione non esistente' )
+    
+    return render_template('reg.html',reg=capoluogo)
 
-    for utente in capoluoghiRegione:
-        if utente.value == regione:
-            return render_template('reg.html',reg=utente.keys)
-        else:
-            return render_template('errore.html')
+        
 
 
 
