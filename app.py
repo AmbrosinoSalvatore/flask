@@ -1,87 +1,132 @@
-from flask import Flask,render_template,request, Response,redirect,url_for
+from flask import Flask, render_template, send_file, make_response, url_for, Response,request,redirect
 app = Flask(__name__)
-# pip install flask pandas contextily geopandas matplotlib
-import matplotlib.pyplot as plt
-import matplotlib
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import contextily
-import geopandas as gpd
+
 import io
+import geopandas as gpd
+import contextily
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import pandas as pd
+
 stazioni = pd.read_csv('/workspace/flask/templates/coordfix_ripetitori_radiofonici_milano_160120_loc_final.csv',sep=';')
 stazionigeo = gpd.read_file('/workspace/flask/ds710_coordfix_ripetitori_radiofonici_milano_160120_loc_final.geojson',sep=';')
 quartieri = gpd.read_file('/workspace/flask/ds964_nil_wm.zip')
-@app.route('/', methods=['GET'])
-def home():
-    return render_template('home.html')
+@app.route("/", methods=["GET"])
 
-@app.route('/selezione', methods=['GET'])
+# ES1
+def home():
+    return render_template("home.html")
+
+@app.route("/selezione", methods=["GET"])
 def selezione():
-    #capire quale radiobutton è stato selezionato
-    scelta=request.args['scelta']
+    scelta = request.args['scelta']
+    #in base alla scelta del radio button ti porta a diverse rotte
     if scelta == 'es1':
         return redirect(url_for('numero'))
     elif scelta == 'es2':
         return redirect(url_for('input'))
     else:
         return redirect(url_for('dropdown'))
+        
 
-@app.route('/numero', methods=['GET'])
+
+@app.route("/numero", methods=["GET"])
 def numero():
     global risultato
-    #numero stazioni per ogni municipio
-    risultato=stazioni.groupby('MUNICIPIO')['OPERATORE'].count().reset_index()
-    return render_template('elenco.html',risultato=risultato.to_html())
+#numero stazioni per ogni municipio
+    risultato = stazioni.groupby('MUNICIPIO')['OPERATORE'].count().reset_index()
 
-@app.route('/grafico', methods=['GET'])
-def grfico():
+    return render_template("elenco.html",risultato=risultato.to_html())
+
+@app.route("/grafico", methods=["GET"])
+def grafico():
     #costruzione del grafico
-    fig, ax = plt.subplots(figsize = (6,4))
-
+    fig, ax = plt.subplots(figsize = (5,5))
     x = risultato.MUNICIPIO
     y = risultato.OPERATORE
 
-    ax.bar(x, y, color = "#304C89")
-    #visualizzazione del grafico
-    output = io.BytesIO()#STABILIRE IL CANALE DI COMUNICAZIONE
-    FigureCanvas(fig).print_png(output)#stampare l'immagiine sull'output
-    return Response(output.getvalue(), mimetype='image/png')#mandare in risposta quello che c'e nell'output e gli diciamo che è un immagine
+    ax.bar(x,y,)
+    #visualizzazione grafico
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    
+    return Response(output.getvalue(), mimetype='image/png')
 
-@app.route('/ricerca', methods=['GET'])
-def ricerca():
-  quartiere = request.args['quartieri']
-  quartiereUtente = quartieri[quartieri['NIL'].str.contains(quartiere)]
-  stazioniQuartieri = stazionigeo[stazionigeo.within(quartiereUtente.geometry.squeeze())]
-  return render_template('elenco1.html', risultato = stazioniQuartieri.to_html())
-
-@app.route('/input', methods=['GET'])
+# ES 2
+@app.route("/input", methods=["GET"])
 def input():
+    
     return render_template('input.html')
 
-@app.route('/dropdown', methods=['GET'])
+@app.route("/ricerca", methods=["GET"])
+def ricerca():
+    #dichiarazione globale di due variabili
+    global stazioniQuartiere ,quartiere
+    #controlla quello che l'utente ha inserito nella textbox
+    nomeQuar = request.args['quartiere']
+    #cerca nel dataframe quartieri il quartiere corrispondente al quartiere inserito dall'utente 
+    quartiere = quartieri[quartieri.NIL.str.contains(nomeQuar)]
+    #controlla i quartieri che intersecano con lil geodataframe stazionigeo
+    stazioniQuartiere = stazionigeo[stazionigeo.intersects(quartiere.geometry.squeeze())]
+    
+    return render_template('elenco1.html',risultato=stazioniQuartiere.to_html())
+
+@app.route("/mappa", methods=["GET"])
+def mappa():
+    
+    fig, ax = plt.subplots(figsize = (12,8))
+
+    stazioniQuartiere.to_crs(epsg=3857).plot(ax=ax,color='black')
+    quartiere.to_crs(epsg=3857).plot(ax=ax,alpha=0.3,edgecolor='k')
+    contextily.add_basemap(ax=ax)
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    FigureCanvas(fig).print_png(output)
+    
+    return Response(output.getvalue(), mimetype='image/png')
+
+# ES 3
+@app.route("/dropdown", methods=["GET"])
 def dropdown():
-    nomistazioni = stazioni.OPERATORE.to_list()
-    nomistazioni = list(set(nomistazioni))
-    nomistazioni.sort()
-    return render_template('dropdown.html', stazioni = nomistazioni)
+    #trasforma in una lista la colonna OPERATORE del dataframe stazioni
+    nomi_Stazioni = stazioni.OPERATORE.to_list()
+    #traforma in lista e droppa i duplicati 
+    nomi_Stazioni = list(set(nomi_Stazioni))
+    #riordina in ordine alfabetico in base al codice ASCII
+    nomi_Stazioni.sort()
 
-@app.route('/sceltastazioni', methods=['GET'])
-def sceltastazioni():
-    stazione = request.args['stazione']
-    stazione_utente = stazionigeo[stazionigeo.OPERATORE == stazione]
-    quartiere = quartieri[quartieri.contains(stazione_utente.geometry.squeeze())]
-    return render_template(lista_stazione.html,quartiere=quartiere)
+    return render_template('dropdown.html',stazioni=nomi_Stazioni)
 
-@app.route('/mappaquarieri', methods=['GET'])
-def mappaquart():
-  fig, ax = plt.subplots(figsize = (12,8))
-  quartiere1.to_crs(epsg=3857).plot(ax=ax, alpha=0.5, edgecolor='k')
-  stazioni_utente.to_crs(epsg=3857).plot(ax=ax, color='r', edgecolor='k')
-  ctx.add_basemap(ax=ax)
-  output = io.BytesIO()
-  FigureCanvas(fig).print_png(output)
-  return Response(output.getvalue(), mimetype='image/png')
+@app.route("/sceltastazione", methods=["GET"])
+def sceltastazione():
+    global quartiere1,stazioneUtente
+    #controlla quello che l'utente ha selezionato nel menu a tendina
+    stazione = request.args['stazione']  
+    #cerca nel geodataframe la stazionec corrispondente alla stazione selezionata dall'utente
+    stazioneUtente = stazionigeo[stazionigeo.OPERATORE== stazione] 
+    #controlla  i quartieri che contengono la stazione inserita dall'utente
+    quartiere1 = quartieri[quartieri.contains(stazioneUtente.geometry.squeeze())]
+
+    return render_template('vistastazione.html',quartiere = quartiere1)
+
+@app.route("/mappaquar", methods=["GET"])
+def mappaquar():
+    fig, ax = plt.subplots(figsize = (12,8))
+
+    stazioneUtente.to_crs(epsg=3857).plot(ax=ax,color='black')
+    quartiere1.to_crs(epsg=3857).plot(ax=ax,alpha=0.3,edgecolor='k')
+    contextily.add_basemap(ax=ax)
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    FigureCanvas(fig).print_png(output)
+    
+    return Response(output.getvalue(), mimetype='image/png')
+
+
+
 
 if __name__ == '__main__':
-  app.run(host='0.0.0.0', port=3245, debug=True)
+  app.run(host='0.0.0.0', port=1234, debug=True)
