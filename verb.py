@@ -59,6 +59,23 @@ def mappa():
     FigureCanvas(fig).print_png(output)
     
     return Response(output.getvalue(), mimetype='image/png')
+#3
+@app.route('/es3', methods=['GET'])
+def es3():
+    risultato = stazioni.groupby('MUNICIPIO')['OPERATORE'].count().reset_index()
+    return render_template("tabella.html",risultato=risultato.to_html())
+
+@app.route('/grafico', methods=['GET'])
+def graf():
+    fig, ax = plt.subplots
+    x = risultato.MUNICIPIO
+    y = risultato.OPERATORE
+    ax.bar(x,y)
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    
+    return Response(output.getvalue(), mimetype='image/png')
+
     
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=3245, debug=True)
