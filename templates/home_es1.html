@@ -1,0 +1,6 @@
+<form action="/elenco">
+    {% for quartiere in quartieri%}
+    <input type="radio" name="quartiere" value="{{quartiere}}">{{quartiere}}<br>
+    {%endfor%}
+    <p><input type = "submit" value = "Submit" /></p>
+</form>

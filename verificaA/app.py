@@ -54,7 +54,7 @@ def grafico():
     FigureCanvas(fig).print_png(output)
     
     return Response(output.getvalue(), mimetype='image/png')
-
+    #?
 # ES 2
 @app.route("/input", methods=["GET"])
 def input():
@@ -86,7 +86,7 @@ def mappa():
     FigureCanvas(fig).print_png(output)
     FigureCanvas(fig).print_png(output)
     
-    return Response(output.getvalue(), mimetype='image/png')
+    return Response(output.getvalue(), mimetype='image/png')#?
 
 # ES 3
 @app.route("/dropdown", methods=["GET"])
