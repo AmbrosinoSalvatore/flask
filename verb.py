@@ -5,7 +5,7 @@
 #3. Avere il numero di stazioni per ogni municipio (in ordine crescente sul numero del municipio) e il grafico corrispondente
 from flask import Flask, render_template, send_file, make_response, url_for, Response,request,redirect
 app = Flask(__name__)
-
+# pip install flask pandas contextily geopandas matplotlib
 import io
 import geopandas as gpd
 import contextily
@@ -32,12 +32,33 @@ def es1():
 @app.route('/elenco', methods=['GET'])
 def elenco():
     quartiere = request.args['quartiere']
-    stazioni = stazionigeo[stazionigeo.whitin(quartier.geometry.squeeze())]
-    return render_template('elencob.html',stazioni=stazioni)
-
+    quartiere_utente = quartieri[quartieri.NIL == quartiere] 
+    stazioni_q = stazionigeo[stazionigeo.within(quartiere_utente.geometry.squeeze())]
+    return render_template('elencob.html',risultato=stazioni_q.to_html())
+#2v
 @app.route('/es2', methods=['GET'])
 def es2():
     return render_template('home_es2.html')
 
+@app.route('/ricerca_stazioni', methods=['GET'])
+def staz():
+    global quartiere_utente,stazioni_quar
+    quartiere = request.args['quartiere']
+    quartiere_utente = quartieri[quartieri.NIL.str.contains(quartiere)]
+    stazioni_quar = stazionigeo[stazionigeo.intersects(quartiere_utente.geometry.squeeze())]
+    return render_template('mappa.html')
+
+@app.route('/mappa', methods=['GET'])
+def mappa():
+    fig, ax = plt.subplots(figsize = (12,8))
+    quartiere_utente.to_crs(3857).plot(ax=ax,alpha=0.3,edgecolor='k')
+    stazioni_quar.to_crs(3857).plot(ax=ax,color='k')
+    contextily.add_basemap(ax=ax)
+    output = io.BytesIO()
+    FigureCanvas(fig).print_png(output)
+    FigureCanvas(fig).print_png(output)
+    
+    return Response(output.getvalue(), mimetype='image/png')
+    
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=3245, debug=True)
