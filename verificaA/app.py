@@ -52,7 +52,6 @@ def grafico():
     #visualizzazione grafico
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
-    
     return Response(output.getvalue(), mimetype='image/png')
     #?
 # ES 2
@@ -120,9 +119,7 @@ def mappaquar():
     quartiere1.to_crs(epsg=3857).plot(ax=ax,alpha=0.3,edgecolor='k')
     contextily.add_basemap(ax=ax)
     output = io.BytesIO()
-    FigureCanvas(fig).print_png(output)
-    FigureCanvas(fig).print_png(output)
-    
+    FigureCanvas(fig).print_png(output)   
     return Response(output.getvalue(), mimetype='image/png')
 
 

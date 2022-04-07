@@ -56,24 +56,23 @@ def mappa():
     contextily.add_basemap(ax=ax)
     output = io.BytesIO()
     FigureCanvas(fig).print_png(output)
-    FigureCanvas(fig).print_png(output)
     
     return Response(output.getvalue(), mimetype='image/png')
 #3
 @app.route('/es3', methods=['GET'])
 def es3():
+    global risultato
     risultato = stazioni.groupby('MUNICIPIO')['OPERATORE'].count().reset_index()
     return render_template("tabella.html",risultato=risultato.to_html())
 
 @app.route('/grafico', methods=['GET'])
 def graf():
-    fig, ax = plt.subplots
+    fig, ax = plt.subplots(figsize = (12,8))
     x = risultato.MUNICIPIO
     y = risultato.OPERATORE
     ax.bar(x,y)
     output = io.BytesIO()
-    FigureCanvas(fig).print_png(output)
-    
+    FigureCanvas(fig).print_png(output)  
     return Response(output.getvalue(), mimetype='image/png')
 
     
