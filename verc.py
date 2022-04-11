@@ -26,5 +26,31 @@ quartieri = gpd.read_file('/workspace/flask/verificaA/ds964_nil_wm.zip')
 def home():
     return render_template('homec.html')
 
+@app.route("/selezione", methods=["GET"])
+def selezione():
+  scelta = request.args['scelta']
+  #in base alla scelta del radio button ti porta a diverse rotte
+  if scelta == 'es1':
+    return redirect(url_for('distanza'))
+  elif scelta == 'es2':
+    return redirect(url_for('input'))
+  else:
+    return redirect(url_for('dropdown'))
+
+@app.route("/distanza", methods=["GET"])
+def distanza():
+  return render_template("distanza.html")
+
+@app.route("/elenco", methods=["GET"])
+def elenco():
+  min = request.args['valoreI']
+  max = request.args['valoreF']
+  l_linee = linne[(linne["lung_km"]>min) & linee["lung_km"]< max].sort_values("linea")
+  return render_template("elenco.html",tabella = l_linee.to_html())
+
+
+
+
+
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=3245, debug=True)
