@@ -20,8 +20,12 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-linee = pd.read_csv('/workspace/flask/tpl_percorsi_shp (1).zip',sep=';')
-quartieri = gpd.read_file('/workspace/flask/verificaA/ds964_nil_wm.zip')
+linee = gpd.read_file('/workspace/flask/tpl_percorsi_shp (1).zip')
+quartieri = gpd.read_file('/workspace/flask/ds964_nil_wm-20220405T093028Z-001.zip')
+
+
+linee['lung_km'] = linee['lung_km'].astype(float)
+
 @app.route('/', methods=['GET'])
 def home():
     return render_template('homec.html')
@@ -33,9 +37,9 @@ def selezione():
   if scelta == 'es1':
     return redirect(url_for('distanza'))
   elif scelta == 'es2':
-    return redirect(url_for('input'))
+    return redirect(url_for('nome'))
   else:
-    return redirect(url_for('dropdown'))
+    return redirect(url_for('tendina'))
 
 @app.route("/distanza", methods=["GET"])
 def distanza():
@@ -43,11 +47,42 @@ def distanza():
 
 @app.route("/elenco", methods=["GET"])
 def elenco():
-  min = request.args['valoreI']
-  max = request.args['valoreF']
-  l_linee = linne[(linne["lung_km"]>min) & linee["lung_km"]< max].sort_values("linea")
+  Min = float(min(request.args['valoreI'],request.args['valoreF']))
+  Max = float(max(request.args['valoreI'],request.args['valoreF']))
+  l_linee = linee[(linee["lung_km"]>Min) & linee["lung_km"]< Max].sort_values("linea")
   return render_template("elenco.html",tabella = l_linee.to_html())
 
+@app.route('/nome', methods=['GET'])
+def nome():
+  return render_template('nome.html')
+
+@app.route('/elencolinee', methods=['GET'])
+def elenconlinee():
+  quartiere = request.args['quartieri']
+  quartiereUtente = quartieri[quartieri['NIL'].str.contains(quartiere)]
+  linee_quartiere = linee[linee.intersects(quartiereUtente.geometry.squeeze())].sort_values('linea')
+  return render_template('elencolinee.html', risultato = linee_quartiere.to_html())
+
+@app.route('/tendina', methods=['GET'])
+def tendina():
+  return render_template('tendina.html', linee = linee["linea"].drop_duplicates().sort_values(ascending=True))
+
+@app.route('/sceltalinee', methods=['GET'])
+def sceltalinee(): 
+  global lineeUtente
+  linea = int(request.args["linea"])
+  lineeUtente = linee[linee["linea"] == linea]
+  return render_template("vistalinee.html", linea = linea)
+
+@app.route('/mappa', methods=['GET'])
+def mappa():
+  fig, ax = plt.subplots(figsize = (12,8))
+  lineeUtente.to_crs(epsg=3857).plot(ax=ax, color='r')
+  quartieri.to_crs(epsg=3857).plot(ax=ax, alpha=0.5)
+  ctx.add_basemap(ax=ax)
+  output = io.BytesIO()
+  FigureCanvas(fig).print_png(output)
+  return Response(output.getvalue(), mimetype='image/png')
 
 
 
